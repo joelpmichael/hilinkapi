@@ -763,6 +763,89 @@ class webui(Thread):
             self.logger.error(f"{self._modemname} Failed to get device info")
             return False
 
+    def querySignalInfo(self):
+        """
+        This method will query signal information and update existing.
+
+        If session need a refresh :meth:`~validateSession` before calling device information API end point.
+
+        :return:   Return querying device info succeed or not
+        :rtype:    boolean
+        """
+        # if session is not refreshed validate and refresh session again
+        if not self._sessionRefreshed:
+            self.validateSession()
+        # wait if in an operation
+        while self._inOperation:
+            time.sleep(0.5)
+        # if session is valid query device info
+        if self._validSession:
+            try:
+                ######### query device info ##########
+                headers = {"X-Requested-With": "XMLHttpRequest"}
+                response = self.httpGet("/api/device/signal", headers=headers)
+                signalInfo = xmltodict.parse(response.text)
+                if "response" in signalInfo:
+                    self._pci = signalInfo["response"]["pci"]
+                    self._sc = signalInfo["response"]["sc"]
+                    self._cell_id = signalInfo["response"]["cell_id"]
+                    self._rsrq = signalInfo["response"]["rsrq"]
+                    self._rsrp = signalInfo["response"]["rsrp"]
+                    self._rssi = signalInfo["response"]["rssi"]
+                    self._sinr = signalInfo["response"]["sinr"]
+                    self._rscp = signalInfo["response"]["rscp"]
+                    self._ecio = signalInfo["response"]["ecio"]
+                    self._mode = signalInfo["response"]["mode"]
+                    self._ulbandwidth = signalInfo["response"]["ulbandwidth"]
+                    self._dlbandwidth = signalInfo["response"]["dlbandwidth"]
+                    self._txpower = signalInfo["response"]["txpower"]
+                    self._tdd = signalInfo["response"]["tdd"]
+                    self._ul_mcs = signalInfo["response"]["ul_mcs"]
+                    self._dl_mcs = signalInfo["response"]["dl_mcs"]
+                    self._earfcn = signalInfo["response"]["earfcn"]
+                    self._rrc_status = signalInfo["response"]["rrc_status"]
+                    self._rac = signalInfo["response"]["rac"]
+                    self._lac = signalInfo["response"]["lac"]
+                    self._tac = signalInfo["response"]["tac"]
+                    self._band = signalInfo["response"]["band"]
+                    self._nei_cellid = signalInfo["response"]["nei_cellid"]
+                    self._plmn = signalInfo["response"]["plmn"]
+                    self._ims = signalInfo["response"]["wdlfreq"]
+                    self._lteulfreq = signalInfo["response"]["lteulfreq"]
+                    self._ltedlfreq = signalInfo["response"]["ltedlfreq"]
+                    self._transmode = signalInfo["response"]["transmode"]
+                    self._enodeb_id = signalInfo["response"]["enodeb_id"]
+                    self._cqi0 = signalInfo["response"]["cqi0"]
+                    self._cqi1 = signalInfo["response"]["cqi1"]
+                    self._ulfrequency = signalInfo["response"]["ulfrequency"]
+                    self._dlfrequency = signalInfo["response"]["dlfrequency"]
+                    self._arfcn = signalInfo["response"]["arfcn"]
+                    self._bsic = signalInfo["response"]["bsic"]
+                    self._rxlev = signalInfo["response"]["rxlev"]
+
+                    # invalidate refresh
+                    self._sessionRefreshed = False
+                    # reset if theres any active error
+                    self.resetActiveErrorCode()
+                    # return success
+                    return True
+                else:
+                    self.sessionErrorCheck(signalInfo)
+                    self._sessionRefreshed = False
+                    return False
+                ####### query device info end ########
+            except Exception as e:
+                # invalidate refresh
+                self._sessionRefreshed = False
+                self.logger.error(e)
+                self.logger.error(f"{self._modemname} Failed to get signal info")
+                return False
+        else:
+            # invalidate refresh
+            self._sessionRefreshed = False
+            self.logger.error(f"{self._modemname} Failed to get signal info")
+            return False
+
     def querySupportedNetworkMethods(self):
         """
         This method will query supported network modes
@@ -1100,6 +1183,91 @@ class webui(Thread):
             "hwversion": self._hwversion,
             "swversion": self._swversion,
             "webui": self._webui,
+        }
+
+    def getSignalInfo(self):
+        """
+        This method will return following modem signal info as a dictionary.
+
+        These information have get update by calling :meth:`~querySignalInfo`
+
+        #. *pci* - xxx
+        #. *sc* - xxx
+        #. *cell_id* - xxx
+        #. *rsrq* - xxx
+        #. *rsrp* - xxx
+        #. *rssi* - xxx
+        #. *sinr* - xxx
+        #. *rscp* - xxx
+        #. *ecio* - xxx
+        #. *mode* - xxx
+        #. *ulbandwidth* - xxx
+        #. *dlbandwidth* - xxx
+        #. *txpower* - xxx
+        #. *tdd* - xxx
+        #. *ul_mcs* - xxx
+        #. *dl_mcs* - xxx
+        #. *earfcn* - xxx
+        #. *rrc_status* - xxx
+        #. *rac* - xxx
+        #. *lac* - xxx
+        #. *tac* - xxx
+        #. *band* - xxx
+        #. *nei_cellid* - xxx
+        #. *plmn* - xxx
+        #. *wdlfreq* - xxx
+        #. *lteulfreq* - xxx
+        #. *ltedlfreq* - xxx
+        #. *transmode* - xxx
+        #. *enodeb_id* - xxx
+        #. *cqi0* - xxx
+        #. *cqi1* - xxx
+        #. *ulfrequency* - xxx
+        #. *dlfrequency* - xxx
+        #. *arfcn* - xxx
+        #. *bsic* - xxx
+        #. *rxlev* - xxx
+
+        :return:   Device information as a dictionary
+        :rtype:    dictionary
+        """
+        return {
+            "pci": self._pci,
+            "sc": self._sc,
+            "cell_id": self._cell_id,
+            "rsrq": self._rsrq,
+            "rsrp": self._rsrp,
+            "rssi": self._rssi,
+            "sinr": self._sinr,
+            "rscp": self._rscp,
+            "ecio": self._ecio,
+            "mode": self._mode,
+            "ulbandwidth": self._ulbandwidth,
+            "dlbandwidth": self._dlbandwidth,
+            "txpower": self._txpower,
+            "tdd": self._tdd,
+            "ul_mcs": self._ul_mcs,
+            "dl_mcs": self._dl_mcs,
+            "earfcn": self._earfcn,
+            "rrc_status": self._rrc_status,
+            "rac": self._rac,
+            "lac": self._lac,
+            "tac": self._tac,
+            "band": self._band,
+            "nei_cellid": self._nei_cellid,
+            "plmn": self._plmn,
+            "wdlfreq": self._ims,
+            "lteulfreq": self._lteulfreq,
+            "ltedlfreq": self._ltedlfreq,
+            "transmode": self._transmode,
+            "enodeb_id": self._enodeb_id,
+            "cqi0": self._cqi0,
+            "cqi1": self._cqi1,
+            "ulfrequency": self._ulfrequency,
+            "dlfrequency": self._dlfrequency,
+            "arfcn": self._arfcn,
+            "bsic": self._bsic,
+            "rxlev": self._rxlev,
         }
 
     def getWANIP(self):
